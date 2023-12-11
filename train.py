@@ -9,7 +9,7 @@ from loguru import logger
 from utils.io import mkdir_if_not_exists
 from utils.plot import Ploter
 from datasets.base import create_dataset
-from datasets.misc import collate_fn_general, collate_fn_squeeze_pcd_batch
+from datasets.misc import collate_fn_general
 from models.base import create_model
 from models.visualizer import create_visualizer
 
@@ -35,10 +35,7 @@ def train(cfg: DictConfig) -> None:
     for subset, dataset in datasets.items():
         logger.info(f'Load {subset} dataset size: {len(dataset)}')
     
-    if cfg.model.scene_model.name == 'PointTransformer':
-        collate_fn = collate_fn_squeeze_pcd_batch
-    else:
-        collate_fn = collate_fn_general
+    collate_fn = collate_fn_general
     
     dataloaders = {
         'train': datasets['train'].get_dataloader(
@@ -61,12 +58,12 @@ def train(cfg: DictConfig) -> None:
     
     ## create model, diffuser, and optimizer
     model = create_model(cfg.model, slurm=cfg.slurm)
-    diffuser = create_diffuser(model, cfg.diffuser)
-    diffuser.to(device=device)
+    # diffuser = create_diffuser(model, cfg.diffuser)
+    model.to(device=device)
     
     params = []
     nparams = []
-    for n, p in diffuser.named_parameters():
+    for n, p in model.named_parameters():
         if p.requires_grad:
             params.append(p)
             nparams.append(p.nelement())
@@ -88,14 +85,14 @@ def train(cfg: DictConfig) -> None:
     step = 0
     for epoch in range(0, cfg.task.train.num_epochs):
         ## train in epoch
-        diffuser.train()
+        model.train()
         for it, data in enumerate(dataloaders['train']):
             for key in data:
                 if torch.is_tensor(data[key]):
                     data[key] = data[key].to(device)
 
             optimizer.zero_grad()
-            outputs = diffuser(data)
+            outputs = model(data)
             outputs['loss'].backward()
             optimizer.step()
             

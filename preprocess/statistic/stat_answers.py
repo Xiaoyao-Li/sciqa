@@ -1,7 +1,7 @@
 import numpy as np
 import json
 
-problems = json.load(open('/home/puhao/thu/ml/data/scienceqa/problems.json'))
+problems = json.load(open('/mnt/seagate12t/VQA/scienceqa/problems.json'))
 
 # static the choices
 answers = {}  # key: choice, value: count
@@ -13,7 +13,7 @@ for p in problems.values():
     answers[ans] += 1
 
 # sort the choices
-NUM_CLASSES = 1024
+NUM_CLASSES = 2048
 answers = sorted(answers.items(), key=lambda x: x[1], reverse=True)
 # caculte the top 100 choices / all choices
 top_num = answers[:NUM_CLASSES]

@@ -1,0 +1,29 @@
+name: scienceqa
+
+lr: 1e-4
+
+dataset: 
+  name: ScienceQA
+
+  data_dir: /mnt/seagate12t/VQA/scienceqa
+  data_dir_slurm: None
+  data_dir_charlie: None
+
+  max_choices: ${model.max_choices}
+  answerable_only: true
+  vocab_path: ${model.vocab_path}
+  vocab_path_slurm: ${model.vocab_path_slurm}
+  vocab_path_charlie: ${model.vocab_path_charlie}
+  device: cuda
+
+train:
+  num_epochs: 100
+  batch_size: 128
+  num_workers: 4
+
+test:
+  batch_size: 128
+  num_workers: 0
+
+visualizer:
+  visualize: false

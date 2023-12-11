@@ -1,7 +1,8 @@
 import numpy as np
 import json
 
-problems = json.load(open('/home/puhao/thu/ml/data/scienceqa/problems.json'))
+# problems = json.load(open('/home/puhao/thu/ml/data/scienceqa/problems.json'))
+problems = json.load(open('/mnt/seagate12t/VQA/scienceqa/problems.json'))
 
 # static the choices
 choices = {}  # key: choice, value: count

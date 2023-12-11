@@ -398,3 +398,5 @@ FodyWeavers.xsd
 *.sln.iml
 
 #* custom ignore entries
+outputs/
+preprocess/assets/
