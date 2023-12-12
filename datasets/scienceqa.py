@@ -6,11 +6,12 @@ import glob
 from tqdm import tqdm
 import pickle
 import torch
+import torchvision
+from PIL import Image
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from omegaconf import DictConfig, OmegaConf
 
-from datasets.misc import collate_fn_general
 # from datasets.transforms import make_default_transform
 from datasets.base import DATASET
 
@@ -32,6 +33,7 @@ class ScienceQA(Dataset):
         else:
             raise Exception('Unsupported phase.')
         self.device = cfg.device
+        self.image_resolution = cfg.image_resolution
         self.max_choices = cfg.max_choices
         self.answerable_only = cfg.answerable_only
         self.valid_choices = None
@@ -47,6 +49,10 @@ class ScienceQA(Dataset):
             self.pid_splits = json.load(f)
             self.pid_splits = {k: v for k, v in self.pid_splits.items() if k in self.splits}
 
+        self.image_to_tensor = torchvision.transforms.ToTensor()
+        self.image_preprocess = torch.nn.Sequential(
+                    torchvision.transforms.Resize((self.image_resolution, self.image_resolution), antialias=True),
+                )
         self._pre_load_data()
 
     def _pre_load_data(self, ) -> None:
@@ -78,7 +84,24 @@ class ScienceQA(Dataset):
         """
         pid = self.indices[index]
         metadata = self.metadatas[pid]
-        data = {}
+        # load image into numpy array
+        mask_image = 0.
+        if metadata['image'] is not None:
+            image_path = os.path.join(self.data_dir, 'images', metadata['split'], str(pid), 'image.png')
+            image = self.image_preprocess(self.image_to_tensor(Image.open(image_path).convert('RGB')))
+            mask_image = 1.
+        else:
+            image = torch.zeros((3, self.image_resolution, self.image_resolution), dtype=torch.float32)
+        data = {
+            'pid': pid,
+            'mask_hint': None,
+            'incontext_hint': metadata['hint'],
+            'mask_image': torch.tensor(mask_image, dtype=torch.float32),
+            'incontext_image': image,
+            'question': metadata['question'],
+            'choices': metadata['choices'],
+            'answer': metadata['answer'],
+        }
         return data
     
     def get_dataloader(self, **kwargs):

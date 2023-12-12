@@ -9,6 +9,7 @@ dataset:
   data_dir_slurm: None
   data_dir_charlie: None
 
+  image_resolution: 224
   max_choices: ${model.max_choices}
   answerable_only: true
   vocab_path: ${model.vocab_path}
@@ -18,8 +19,9 @@ dataset:
 
 train:
   num_epochs: 100
-  batch_size: 128
+  batch_size: 16
   num_workers: 4
+  log_step: 1
 
 test:
   batch_size: 128

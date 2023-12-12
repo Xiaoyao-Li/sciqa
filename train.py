@@ -4,6 +4,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from omegaconf import DictConfig, OmegaConf
 from loguru import logger
+import numpy as np
 
 # from utils.misc import compute_model_dim
 from utils.io import mkdir_if_not_exists
@@ -109,19 +110,25 @@ def train(cfg: DictConfig) -> None:
                     })
 
             step += 1
+
+            ## delete outputs for clearing cache
+            # for k in list(outputs):
+            #     del outputs[k]
+            # del outputs
         
         ## test in epoch
         if (epoch + 1) % cfg.task.eval_interval == 0:
+            ## evaluation on validation set
             best_epoch = epoch
             save_ckpt(
-                model=diffuser, optimizer=optimizer, epoch=best_epoch, step=step,
+                model=model, optimizer=optimizer, epoch=best_epoch, step=step,
                 path=os.path.join(cfg.ckpt_dir, f'model-{(epoch // 300 + 1) * 300}.pth')
             )
 
         ## test for visualize
         if cfg.task.visualizer.visualize and (epoch + 1) % cfg.task.eval_visualize == 0:
             vis_dir = os.path.join(cfg.vis_dir, f'epoch{epoch+1:3d}')
-            visualizer.visualize(diffuser, dataloaders['test_for_vis'], vis_dir)
+            visualizer.visualize(model, dataloaders['test_for_vis'], vis_dir)
 
 def save_ckpt(model: torch.nn.Module, optimizer: torch.optim.Optimizer, epoch: int, step: int, path: str) -> None:
     """ Save current model and corresponding data
@@ -174,4 +181,10 @@ def main(cfg: DictConfig) -> None:
     logger.info('End training..')
 
 if __name__ == '__main__':
+    SEED = 42
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed(SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     main()

@@ -27,6 +27,7 @@ class TextProcessor(nn.Module):
         self.only_embed = only_embed
         classes = list(classes)
 
+
         self.embed = nn.Embedding(len(classes)+1, embedding_features, padding_idx=len(classes))
         weight_init = torch.from_numpy(np.load(qa_path+'/glove6b.init_scienceqa_onlyquestion_300d.npy'))
         assert weight_init.shape == (len(classes), embedding_features)
@@ -41,11 +42,13 @@ class TextProcessor(nn.Module):
 
         if not self.only_embed:
             self.lstm = nn.GRU(input_size=embedding_features,
-                           hidden_size=lstm_features,
-                           num_layers=1,
-                           batch_first=not use_hidden,)
+                                hidden_size=lstm_features,
+                                num_layers=1,
+                                batch_first=not use_hidden,)
 
     def forward(self, q, q_len):
+        # replace -1 with len(classes) + 1 (padding index)
+        q = torch.where(q == -1, torch.tensor(self.embed.padding_idx).to(q.device), q)
         embedded = self.embed(q)
         embedded = self.drop(embedded)
 
@@ -63,7 +66,6 @@ class TextProcessor(nn.Module):
         else:
             out, _ = self.lstm(embedded)
             return out
-
 
 #embed_vecs = obj_edge_vectors(classes, wv_dim=embedding_features)
 #self.embed.weight.data = embed_vecs.clone()

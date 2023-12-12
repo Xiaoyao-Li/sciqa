@@ -5,10 +5,12 @@ import torch.nn.init as init
 from torch.autograd import Variable
 from torch.nn.utils import weight_norm
 from torch.nn.utils.rnn import pack_padded_sequence
-from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from omegaconf import DictConfig
-from typing import Dict, Tuple
+from collections import OrderedDict
+from typing import Dict, Tuple, List
 import json
+import warnings
 
 import models.modules.word_embedding as word_embedding
 from models.modules.utils import Fusion, FCNet
@@ -26,14 +28,18 @@ class DFAF(nn.Module):
         self.num_inter_head = cfg.num_inter_head
         self.num_intra_head = cfg.num_intra_head
         self.num_block = cfg.num_block
+        self.max_text_words = cfg.max_text_words
+        self.num_vision_tokens = cfg.num_vision_tokens
         self.apply_mask = cfg.apply_mask
+        self.loss_type = cfg.loss_type
         self.vocab = json.load(open(cfg.vocab_path, 'r'))
         self.words_list = self.vocab['question'].keys()
+        self.choice_to_index = self.vocab['choice']
 
         assert(self.hidden_features % self.num_inter_head == 0)
         assert(self.hidden_features % self.num_intra_head == 0)
 
-        self.fasterRCNN = fasterrcnn_resnet50_fpn_v2(pretrained=True)
+        self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True)
 
         self.text = word_embedding.TextProcessor(
             classes=self.words_list,
@@ -50,6 +56,7 @@ class DFAF(nn.Module):
             num_inter_head=self.num_inter_head,
             num_intra_head=self.num_intra_head,
             drop=0.1,
+            apply_mask=self.apply_mask,
         )
         self.classifier = Classifier(
             in_features=self.hidden_features,
@@ -58,6 +65,76 @@ class DFAF(nn.Module):
             drop=0.5,
             apply_mask=self.apply_mask,
         )
+
+        # ## mokey patching for fasterRCNN
+        # def fasterRCNN_dfaf_forward(self, images, targets=None):
+        #     if self.training:
+        #         if targets is None:
+        #             torch._assert(False, "targets should not be none when in training mode")
+        #         else:
+        #             for target in targets:
+        #                 boxes = target["boxes"]
+        #                 if isinstance(boxes, torch.Tensor):
+        #                     torch._assert(
+        #                         len(boxes.shape) == 2 and boxes.shape[-1] == 4,
+        #                         f"Expected target boxes to be a tensor of shape [N, 4], got {boxes.shape}.",
+        #                     )
+        #                 else:
+        #                     torch._assert(False, f"Expected target boxes to be of type Tensor, got {type(boxes)}.")
+
+        #     original_image_sizes: List[Tuple[int, int]] = []
+        #     for img in images:
+        #         val = img.shape[-2:]
+        #         torch._assert(
+        #             len(val) == 2,
+        #             f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
+        #         )
+        #         original_image_sizes.append((val[0], val[1]))
+
+        #     images, targets = self.transform(images, targets)
+
+        #     # Check for degenerate boxes
+        #     # TODO: Move this to a function
+        #     if targets is not None:
+        #         for target_idx, target in enumerate(targets):
+        #             boxes = target["boxes"]
+        #             degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
+        #             if degenerate_boxes.any():
+        #                 # print the first degenerate box
+        #                 bb_idx = torch.where(degenerate_boxes.any(dim=1))[0][0]
+        #                 degen_bb: List[float] = boxes[bb_idx].tolist()
+        #                 torch._assert(
+        #                     False,
+        #                     "All bounding boxes should have positive height and width."
+        #                     f" Found invalid box {degen_bb} for target at index {target_idx}.",
+        #                 )
+
+        #     features = self.backbone(images.tensors)
+        #     if isinstance(features, torch.Tensor):
+        #         features = OrderedDict([("0", features)])
+        #     proposals, proposal_losses = self.rpn(images, features, targets)
+        #     for idx in range(len(proposals)):
+        #         p = proposals[idx]
+        #         if p.shape[0] < 1000:
+        #             p = torch.cat([p, torch.zeros([1000 - p.shape[0], 4]).to(p)], dim=0)
+        #         elif p.shape[0] > 1000:
+        #             p = p[:1000]
+        #         proposals[idx] = p
+        #     detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
+        #     detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
+
+        #     losses = {}
+        #     losses.update(detector_losses)
+        #     losses.update(proposal_losses)
+
+        #     if torch.jit.is_scripting():
+        #         if not self._has_warned:
+        #             warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
+        #             self._has_warned = True
+        #         return losses, detections
+        #     else:
+        #         return self.eager_outputs(losses, detections)
+        # self.fasterRCNN.forward = fasterRCNN_dfaf_forward.__get__(self.fasterRCNN)
 
         if cfg.freeze_fasterRCNN:
             for param in self.fasterRCNN.parameters():
@@ -77,11 +154,53 @@ class DFAF(nn.Module):
             }
         """
         B = len(data['question'])
+        incontext_image = data['incontext_image']
+        incontext_image_mask = torch.ones(B, incontext_image.shape[1]).to(incontext_image.device)
+        question = data['question']
+        question_mask = torch.ones(B, self.max_text_words).to(incontext_image.device)
         
-        visual_feature = self._extract_visual_feature(data['image'])
+        question, question_length = self._question_to_index(question)
+        question = question.to(incontext_image.device)
+        question_feature = self.text(question, question_length)
+        visual_feature = self._extract_visual_feature(incontext_image)
+        
+        visual_feature, question_feature = self.interIntraBlocks(visual_feature, question_feature, incontext_image_mask, question_mask)
+        answer = self.classifier(visual_feature, question_feature, incontext_image_mask, question_mask)
 
-        return {'loss': loss}
+        loss, accuracy = self.criterion(answer, data['choices'], data['answer'])
 
+        return {'loss': loss, 'accuracy': accuracy}
+    
+    def criterion(self, pred_answer, choices, answer):
+        if self.loss_type == 'BCE':
+            answer_indices = torch.tensor([self.choice_to_index[c[a]] for c, a in zip(choices, answer)], dtype=torch.long).to(pred_answer.device)
+            answer_onehot = torch.zeros(pred_answer.shape).to(pred_answer.device)
+            answer_onehot.scatter_(1, answer_indices.unsqueeze(1), 1)
+            loss = F.binary_cross_entropy_with_logits(pred_answer, answer_onehot)
+
+            pred_answer_indices = pred_answer.argmax(dim=1)
+            accuracy = (pred_answer_indices == answer_indices).sum().float() / len(answer_indices)
+        else:
+            raise NotImplementedError
+        
+        return loss, accuracy
+
+
+    @torch.no_grad()
+    def _question_to_index(self, question: list) -> torch.Tensor:
+        q_indices = []
+        q_length = []
+        for q in question:
+            q = q.split()
+            q = [w.replace(',', '').replace('.', '').replace('?', '').lower() for w in q]
+            q = [self.vocab['question'][w] if w in self.vocab['question'] else -1 for w in q][:self.max_text_words]
+            q_length.append(len(q))
+            q = q + [-1] * (self.max_text_words - len(q))
+            q_indices.append(q)
+        q_indices = torch.tensor(q_indices, dtype=torch.long)
+        return q_indices, q_length
+
+    @torch.no_grad()
     def _extract_visual_feature(self, image: torch.Tensor) -> torch.Tensor:
         """
         Args:
@@ -89,26 +208,32 @@ class DFAF(nn.Module):
         Returns:
             visual_feature: [batch, 32, 1024]
         """
+        self.fasterRCNN.eval()
         visual_features = []
         feature_scores = []
+        hook_handles = []
         def save_features(mod, inp, outp):
             visual_features.append(outp)
         def save_scores(mod, inp, outp):
             feature_scores.append(outp)
         for name, layer in self.fasterRCNN.named_modules():
             if name == 'roi_heads.box_head.fc6':
-                layer.register_forward_hook(save_features)
+                hook_handles.append(layer.register_forward_hook(save_features))
             elif name == 'roi_heads.box_predictor.cls_score':
-                layer.register_forward_hook(save_scores)
+                hook_handles.append(layer.register_forward_hook(save_scores))
         with torch.no_grad():
             self.fasterRCNN(image)
-        visual_features = visual_features.reshape(image.shape[0], 1000, 1024)
-        feature_scores = feature_scores.reshape(image.shape[0], 1000, 91)
+        visual_feature = visual_features[0].reshape(image.shape[0], 1000, 1024)
+        feature_score = feature_scores[0].reshape(image.shape[0], 1000, 91)
+
         # find top-32 object features
-        feature_scores = torch.max(feature_scores, dim=2)[0]
-        _, topk_obj_idx = torch.topk(feature_scores, 32, dim=1)
-        visual_feature = torch.gather(visual_features, 1, topk_obj_idx.unsqueeze(2).expand([-1, -1, visual_features.shape[2]]))
-        #! require to check
+        feature_score = torch.max(feature_score, dim=2)[0]
+        _, topk_obj_idx = torch.topk(feature_score, self.num_vision_tokens, dim=1)
+        visual_feature = torch.gather(visual_feature, 1, topk_obj_idx.unsqueeze(2).expand([-1, -1, visual_feature.shape[2]]))
+        
+        # remove the hook to avoid gpu memory leaking
+        for h in hook_handles:
+            h.remove()
 
         return visual_feature
 
@@ -195,7 +320,7 @@ class MultiBlock(nn.Module):
     """
     Multi Block (different parameters) Inter-/Intra-modality
     """
-    def __init__(self, num_block, v_size, q_size, output_size, num_inter_head, num_intra_head, drop=0.0):
+    def __init__(self, num_block, v_size, q_size, output_size, num_inter_head, num_intra_head, drop=0.0, apply_mask=True):
         super(MultiBlock, self).__init__()
         self.v_size = v_size
         self.q_size = q_size
@@ -209,9 +334,9 @@ class MultiBlock(nn.Module):
 
         blocks = []
         for i in range(num_block):
-            blocks.append(OneSideInterModalityUpdate(output_size, output_size, output_size, num_inter_head, drop))
-            blocks.append(OneSideInterModalityUpdate(output_size, output_size, output_size, num_inter_head, drop))
-            blocks.append(DyIntraModalityUpdate(output_size, output_size, output_size, num_intra_head, drop))
+            blocks.append(OneSideInterModalityUpdate(output_size, output_size, output_size, num_inter_head, drop, apply_mask=apply_mask))
+            blocks.append(OneSideInterModalityUpdate(output_size, output_size, output_size, num_inter_head, drop, apply_mask=apply_mask))
+            blocks.append(DyIntraModalityUpdate(output_size, output_size, output_size, num_intra_head, drop, apply_mask=apply_mask))
         self.multi_blocks = nn.ModuleList(blocks)
 
     def forward(self, v, q, v_mask, q_mask):
@@ -261,6 +386,7 @@ class InterModalityUpdate(nn.Module):
 
         self.v_output = FCNet(output_size + v_size, output_size, drop=drop)
         self.q_output = FCNet(output_size + q_size, output_size, drop=drop)
+        self.apply_mask = apply_mask
 
     def forward(self, v, q, v_mask, q_mask):
         """
@@ -318,7 +444,7 @@ class OneSideInterModalityUpdate(nn.Module):
     
     According to original paper, instead of parallel V->Q & Q->V, we first to V->Q and then Q->V
     """
-    def __init__(self, src_size, tgt_size, output_size, num_head, drop=0.0):
+    def __init__(self, src_size, tgt_size, output_size, num_head, drop=0.0, apply_mask=True):
         super(OneSideInterModalityUpdate, self).__init__()
         self.src_size = src_size
         self.tgt_size = tgt_size
@@ -329,6 +455,7 @@ class OneSideInterModalityUpdate(nn.Module):
         self.tgt_lin = FCNet(tgt_size, output_size, drop=drop)
 
         self.tgt_output = FCNet(output_size + tgt_size, output_size, drop=drop)
+        self.apply_mask = apply_mask
 
     def forward(self, src, tgt, src_mask, tgt_mask):
         """
