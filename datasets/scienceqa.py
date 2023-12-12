@@ -21,10 +21,11 @@ class ScienceQA(Dataset):
     """ Dataset for ScienceQA.
     """
 
-    def __init__(self, cfg: DictConfig, phase: str, slurm: bool, **kwargs: Dict) -> None:
+    def __init__(self, cfg: DictConfig, phase: str, slurm: bool, charlie: bool, **kwargs: Dict) -> None:
         super(ScienceQA, self).__init__()
         self.phase = phase
         self.slurm = slurm
+        self.charlie = charlie
         if self.phase in ['train', 'val', 'test', 'trainval', 
                           'minitrain', 'minval', 'minitest']:
             self.splits = [self.phase]
@@ -42,7 +43,12 @@ class ScienceQA(Dataset):
             self.valid_choices = list(choice_vocab.keys())[:self.max_choices]
 
         ## resource folders
-        self.data_dir = cfg.data_dir_slurm if self.slurm else cfg.data_dir
+        self.data_dir = cfg.data_dir
+        if self.slurm:
+            self.data_dir = cfg.data_dir_slurm
+        elif self.charlie:
+            self.data_dir = cfg.data_dir_charlie
+        
         with open(os.path.join(self.data_dir, 'problems.json'), 'r') as f:
             self.metadatas = json.load(f)
         with open(os.path.join(self.data_dir, 'pid_splits.json'), 'r') as f:

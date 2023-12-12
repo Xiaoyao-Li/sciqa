@@ -27,12 +27,12 @@ def train(cfg: DictConfig) -> None:
 
     ## prepare dataset for train and test
     datasets = {
-        'train': create_dataset(cfg.task.dataset, 'train', cfg.slurm),
-        'val': create_dataset(cfg.task.dataset, 'val', cfg.slurm),
+        'train': create_dataset(cfg.task.dataset, 'train', cfg.slurm, cfg.charlie),
+        'val': create_dataset(cfg.task.dataset, 'val', cfg.slurm, cfg.charlie),
         # 'test': create_dataset(cfg.task.dataset, 'test', cfg.slurm),
     }
     if cfg.task.visualizer.visualize:
-        datasets['test_for_vis'] = create_dataset(cfg.task.dataset, 'test', cfg.slurm, case_only=True)
+        raise NotImplementedError('Visualizer is not implemented yet.')
     for subset, dataset in datasets.items():
         logger.info(f'Load {subset} dataset size: {len(dataset)}')
     
@@ -58,7 +58,7 @@ def train(cfg: DictConfig) -> None:
         raise NotImplementedError('Visualizer is not implemented yet.')
     
     ## create model, diffuser, and optimizer
-    model = create_model(cfg.model, slurm=cfg.slurm)
+    model = create_model(cfg.model, slurm=cfg.slurm, charlie=cfg.charlie)
     # diffuser = create_diffuser(model, cfg.diffuser)
     model.to(device=device)
     
@@ -157,10 +157,16 @@ def main(cfg: DictConfig) -> None:
 
     if os.environ.get('SLURM') is not None:
         cfg.slurm = True
+    if os.environ.get('CHARLIE') is not None:
+        cfg.charlie = True
+    ## avoide charlie and slurm at the same time
+    assert not (cfg.slurm and cfg.charlie)
 
     ## set output logger and tensorboard
     if cfg.slurm:
         logger.remove(handler_id=0) # remove default handler
+    elif cfg.charlie:
+        logger.remove(handler_id=0)
     logger.add(cfg.exp_dir + '/runtime.log')
 
     mkdir_if_not_exists(cfg.tb_dir)

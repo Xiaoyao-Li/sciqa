@@ -5,7 +5,7 @@ from utils.registry import Registry
 
 MODEL = Registry('Model')
 
-def create_model(cfg: DictConfig, slurm: bool) -> nn.Module:
+def create_model(cfg: DictConfig, slurm: bool, charlie: bool) -> nn.Module:
     """ Create a eps model for predicting epsilon
 
     Args:
@@ -15,4 +15,4 @@ def create_model(cfg: DictConfig, slurm: bool) -> nn.Module:
     Return:
         Model
     """
-    return MODEL.get(cfg.name)(cfg, slurm)
+    return MODEL.get(cfg.name)(cfg, slurm, charlie)

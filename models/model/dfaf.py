@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from torch.nn.utils import weight_norm
 from torch.nn.utils.rnn import pack_padded_sequence
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
+from torchvision.models.detection.faster_rcnn import FasterRCNN_ResNet50_FPN_Weights
 from omegaconf import DictConfig
 from collections import OrderedDict
 from typing import Dict, Tuple, List
@@ -19,9 +20,10 @@ from models.base import MODEL
 
 @MODEL.register()
 class DFAF(nn.Module):
-    def __init__(self, cfg: DictConfig, slurm: bool):
+    def __init__(self, cfg: DictConfig, slurm: bool, charlie: bool):
         super(DFAF, self).__init__()
         self.slurm = slurm
+        self.charlie = charlie
         self.question_features = cfg.question_features_dim
         self.vision_features = cfg.vision_features_dim
         self.hidden_features = cfg.hidden_features_dim
@@ -39,7 +41,7 @@ class DFAF(nn.Module):
         assert(self.hidden_features % self.num_inter_head == 0)
         assert(self.hidden_features % self.num_intra_head == 0)
 
-        self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True)
+        self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True, weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
 
         self.text = word_embedding.TextProcessor(
             classes=self.words_list,

@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 from utils.registry import Registry
 DATASET = Registry('Dataset')
 
-def create_dataset(cfg: dict, phase: str, slurm: bool, **kwargs: Dict) -> Dataset:
+def create_dataset(cfg: dict, phase: str, slurm: bool, charlie: bool, **kwargs: Dict) -> Dataset:
     """ Create a `torch.utils.data.Dataset` object from configuration.
 
     Args:
@@ -14,4 +14,4 @@ def create_dataset(cfg: dict, phase: str, slurm: bool, **kwargs: Dict) -> Datase
     Return:
         A Dataset object that has loaded the designated dataset.
     """
-    return DATASET.get(cfg.name)(cfg, phase, slurm, **kwargs)
+    return DATASET.get(cfg.name)(cfg, phase, slurm, charlie, **kwargs)

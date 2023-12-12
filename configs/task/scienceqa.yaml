@@ -7,7 +7,7 @@ dataset:
 
   data_dir: /mnt/seagate12t/VQA/scienceqa
   data_dir_slurm: None
-  data_dir_charlie: None
+  data_dir_charlie: /home/puhao/thu/ml/data/scienceqa
 
   image_resolution: 224
   max_choices: ${model.max_choices}
@@ -19,12 +19,12 @@ dataset:
 
 train:
   num_epochs: 100
-  batch_size: 16
+  batch_size: 32
   num_workers: 4
-  log_step: 1
+  log_step: 10
 
 test:
-  batch_size: 128
+  batch_size: 32
   num_workers: 0
 
 visualizer:
