@@ -66,75 +66,75 @@ class DFAF(nn.Module):
             apply_mask=self.apply_mask,
         )
 
-        # ## mokey patching for fasterRCNN
-        # def fasterRCNN_dfaf_forward(self, images, targets=None):
-        #     if self.training:
-        #         if targets is None:
-        #             torch._assert(False, "targets should not be none when in training mode")
-        #         else:
-        #             for target in targets:
-        #                 boxes = target["boxes"]
-        #                 if isinstance(boxes, torch.Tensor):
-        #                     torch._assert(
-        #                         len(boxes.shape) == 2 and boxes.shape[-1] == 4,
-        #                         f"Expected target boxes to be a tensor of shape [N, 4], got {boxes.shape}.",
-        #                     )
-        #                 else:
-        #                     torch._assert(False, f"Expected target boxes to be of type Tensor, got {type(boxes)}.")
+        ## mokey patching for fasterRCNN
+        def fasterRCNN_dfaf_forward(self, images, targets=None):
+            if self.training:
+                if targets is None:
+                    torch._assert(False, "targets should not be none when in training mode")
+                else:
+                    for target in targets:
+                        boxes = target["boxes"]
+                        if isinstance(boxes, torch.Tensor):
+                            torch._assert(
+                                len(boxes.shape) == 2 and boxes.shape[-1] == 4,
+                                f"Expected target boxes to be a tensor of shape [N, 4], got {boxes.shape}.",
+                            )
+                        else:
+                            torch._assert(False, f"Expected target boxes to be of type Tensor, got {type(boxes)}.")
 
-        #     original_image_sizes: List[Tuple[int, int]] = []
-        #     for img in images:
-        #         val = img.shape[-2:]
-        #         torch._assert(
-        #             len(val) == 2,
-        #             f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
-        #         )
-        #         original_image_sizes.append((val[0], val[1]))
+            original_image_sizes: List[Tuple[int, int]] = []
+            for img in images:
+                val = img.shape[-2:]
+                torch._assert(
+                    len(val) == 2,
+                    f"expecting the last two dimensions of the Tensor to be H and W instead got {img.shape[-2:]}",
+                )
+                original_image_sizes.append((val[0], val[1]))
 
-        #     images, targets = self.transform(images, targets)
+            images, targets = self.transform(images, targets)
 
-        #     # Check for degenerate boxes
-        #     # TODO: Move this to a function
-        #     if targets is not None:
-        #         for target_idx, target in enumerate(targets):
-        #             boxes = target["boxes"]
-        #             degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
-        #             if degenerate_boxes.any():
-        #                 # print the first degenerate box
-        #                 bb_idx = torch.where(degenerate_boxes.any(dim=1))[0][0]
-        #                 degen_bb: List[float] = boxes[bb_idx].tolist()
-        #                 torch._assert(
-        #                     False,
-        #                     "All bounding boxes should have positive height and width."
-        #                     f" Found invalid box {degen_bb} for target at index {target_idx}.",
-        #                 )
+            # Check for degenerate boxes
+            # TODO: Move this to a function
+            if targets is not None:
+                for target_idx, target in enumerate(targets):
+                    boxes = target["boxes"]
+                    degenerate_boxes = boxes[:, 2:] <= boxes[:, :2]
+                    if degenerate_boxes.any():
+                        # print the first degenerate box
+                        bb_idx = torch.where(degenerate_boxes.any(dim=1))[0][0]
+                        degen_bb: List[float] = boxes[bb_idx].tolist()
+                        torch._assert(
+                            False,
+                            "All bounding boxes should have positive height and width."
+                            f" Found invalid box {degen_bb} for target at index {target_idx}.",
+                        )
 
-        #     features = self.backbone(images.tensors)
-        #     if isinstance(features, torch.Tensor):
-        #         features = OrderedDict([("0", features)])
-        #     proposals, proposal_losses = self.rpn(images, features, targets)
-        #     for idx in range(len(proposals)):
-        #         p = proposals[idx]
-        #         if p.shape[0] < 1000:
-        #             p = torch.cat([p, torch.zeros([1000 - p.shape[0], 4]).to(p)], dim=0)
-        #         elif p.shape[0] > 1000:
-        #             p = p[:1000]
-        #         proposals[idx] = p
-        #     detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
-        #     detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
+            features = self.backbone(images.tensors)
+            if isinstance(features, torch.Tensor):
+                features = OrderedDict([("0", features)])
+            proposals, proposal_losses = self.rpn(images, features, targets)
+            for idx in range(len(proposals)):
+                p = proposals[idx]
+                if p.shape[0] < 1000:
+                    p = torch.cat([p, torch.zeros([1000 - p.shape[0], 4]).to(p)], dim=0)
+                elif p.shape[0] > 1000:
+                    p = p[:1000]
+                proposals[idx] = p
+            detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
+            detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
 
-        #     losses = {}
-        #     losses.update(detector_losses)
-        #     losses.update(proposal_losses)
+            losses = {}
+            losses.update(detector_losses)
+            losses.update(proposal_losses)
 
-        #     if torch.jit.is_scripting():
-        #         if not self._has_warned:
-        #             warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
-        #             self._has_warned = True
-        #         return losses, detections
-        #     else:
-        #         return self.eager_outputs(losses, detections)
-        # self.fasterRCNN.forward = fasterRCNN_dfaf_forward.__get__(self.fasterRCNN)
+            if torch.jit.is_scripting():
+                if not self._has_warned:
+                    warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")
+                    self._has_warned = True
+                return losses, detections
+            else:
+                return self.eager_outputs(losses, detections)
+        self.fasterRCNN.forward = fasterRCNN_dfaf_forward.__get__(self.fasterRCNN)
 
         if cfg.freeze_fasterRCNN:
             for param in self.fasterRCNN.parameters():
