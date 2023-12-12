@@ -1,6 +1,7 @@
 name: scienceqa
 
 lr: 1e-4
+eval_interval: 1
 
 dataset: 
   name: ScienceQA

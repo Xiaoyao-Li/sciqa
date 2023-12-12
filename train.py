@@ -84,6 +84,10 @@ def train(cfg: DictConfig) -> None:
     
     ## start train from scratch
     step = 0
+    best = {
+        'epoch': 0,
+        'performance': 0.0,
+    }
     for epoch in range(0, cfg.task.train.num_epochs):
         ## train in epoch
         model.train()
@@ -119,16 +123,33 @@ def train(cfg: DictConfig) -> None:
         ## test in epoch
         if (epoch + 1) % cfg.task.eval_interval == 0:
             ## evaluation on validation set
-            best_epoch = epoch
-            save_ckpt(
-                model=model, optimizer=optimizer, epoch=best_epoch, step=step,
-                path=os.path.join(cfg.ckpt_dir, f'model-{(epoch // 300 + 1) * 300}.pth')
-            )
-
+            model.eval()
+            performance = []
+            for it, data in enumerate(dataloaders['val']):
+                for key in data:
+                    if torch.is_tensor(data[key]):
+                        data[key] = data[key].to(device)
+                
+                outputs = model(data)
+                acc = outputs['accuracy'].item()
+                performance.append(acc)
+            performance = np.mean(performance)
+            logger.info(f'[VAL] ==> Epoch: {epoch+1:3d} | Accuracy: {performance:.3f}')
+            Ploter.write({
+                'val/accuracy': {'plot': True, 'value': performance, 'step': step},
+                'val/epoch': {'plot': True, 'value': epoch, 'step': step},
+            })
+            if performance > best['performance']:
+                best['performance'] = performance
+                best['epoch'] = epoch
+                save_ckpt(
+                    model=model, optimizer=optimizer, epoch=best['epoch'], step=step,
+                    path=os.path.join(cfg.ckpt_dir, 'model-best.pth')
+                )
+                
         ## test for visualize
         if cfg.task.visualizer.visualize and (epoch + 1) % cfg.task.eval_visualize == 0:
-            vis_dir = os.path.join(cfg.vis_dir, f'epoch{epoch+1:3d}')
-            visualizer.visualize(model, dataloaders['test_for_vis'], vis_dir)
+            raise NotImplementedError('Visualizer is not implemented yet.')
 
 def save_ckpt(model: torch.nn.Module, optimizer: torch.optim.Optimizer, epoch: int, step: int, path: str) -> None:
     """ Save current model and corresponding data
