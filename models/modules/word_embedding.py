@@ -20,16 +20,20 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 qa_path = './models/model/assets'
 class TextProcessor(nn.Module):
-    def __init__(self, classes, embedding_features, lstm_features, drop=0.0, use_hidden=True, use_tanh=False, only_embed=False):
+    def __init__(self, classes, embedding_features, lstm_features, drop=0.0, use_hidden=True, use_tanh=False, only_embed=False,
+                 enable_hint=False):
         super(TextProcessor, self).__init__()
         self.use_hidden = use_hidden # return last layer hidden, else return all the outputs for each words
         self.use_tanh = use_tanh
         self.only_embed = only_embed
+        self.enable_hint = enable_hint
         classes = list(classes)
 
-
         self.embed = nn.Embedding(len(classes)+1, embedding_features, padding_idx=len(classes))
-        weight_init = torch.from_numpy(np.load(qa_path+'/glove6b.init_scienceqa_onlyquestion_300d.npy'))
+        if self.enable_hint:
+            weight_init = torch.from_numpy(np.load(qa_path+'/glove6b.init_scienceqa_questionandhint_300d.npy'))
+        else:
+            weight_init = torch.from_numpy(np.load(qa_path+'/glove6b.init_scienceqa_onlyquestion_300d.npy'))
         assert weight_init.shape == (len(classes), embedding_features)
         print('glove weight shape: ', weight_init.shape)
         self.embed.weight.data[:len(classes)] = weight_init
@@ -67,8 +71,8 @@ class TextProcessor(nn.Module):
             out, _ = self.lstm(embedded)
             return out
 
-#embed_vecs = obj_edge_vectors(classes, wv_dim=embedding_features)
-#self.embed.weight.data = embed_vecs.clone()
+# embed_vecs = obj_edge_vectors(classes, wv_dim=embedding_features)
+# self.embed.weight.data = embed_vecs.clone()
 def obj_edge_vectors(names, wv_type='glove.6B', wv_dir=qa_path, wv_dim=300):
     raise NotImplementedError
     wv_dict, wv_arr, wv_size = load_word_vectors(wv_dir, wv_type, wv_dim)

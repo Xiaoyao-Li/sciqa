@@ -10,9 +10,12 @@ num_block: 1
 loss_type: BCE  ## can be [BCE, SCE, KL, MultiLabel]
 apply_mask: false
 freeze_fasterRCNN: true
+enable_image: false
+enable_hint: false
 
 max_choices: 2048
-max_text_words: 14
+max_question_words: 16
+max_hint_words: 64
 num_vision_tokens: 32
 
 vocab_path: ./datasets/assets/scienceqa_vocab.json

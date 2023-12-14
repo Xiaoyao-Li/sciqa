@@ -26,10 +26,12 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
-                "PYTHONPATH": "${workspaceFolder}"
+                "PYTHONPATH": "${workspaceFolder}",
+                // "CHARLIE": "1",
             },
             "args": [
-                "exp_name=debug", "model=dfaf", "task=scienceqa"
+                "exp_name=debug", "model=dfaf", "task=scienceqa",
+                "model.enable_image=true", "model.enable_hint=true",
             ]
         }
     ]

@@ -30,12 +30,15 @@ class DFAF(nn.Module):
         self.num_inter_head = cfg.num_inter_head
         self.num_intra_head = cfg.num_intra_head
         self.num_block = cfg.num_block
-        self.max_text_words = cfg.max_text_words
+        self.max_question_words = cfg.max_question_words
+        self.max_hint_words = cfg.max_hint_words
         self.num_vision_tokens = cfg.num_vision_tokens
         self.apply_mask = cfg.apply_mask
         self.loss_type = cfg.loss_type
+        self.enable_image = cfg.enable_image
+        self.enable_hint = cfg.enable_hint
         self.vocab = json.load(open(cfg.vocab_path, 'r'))
-        self.words_list = self.vocab['question'].keys()
+        
         self.choice_to_index = self.vocab['choice']
 
         assert(self.hidden_features % self.num_inter_head == 0)
@@ -43,12 +46,19 @@ class DFAF(nn.Module):
 
         self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True, weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
 
+        if not self.enable_hint:
+            self.words_list = self.vocab['question'].keys()
+            self.text_dict = self.vocab['question']
+        else:
+            self.words_list = self.vocab['question_and_hint'].keys()
+            self.text_dict = self.vocab['question_and_hint']
         self.text = word_embedding.TextProcessor(
             classes=self.words_list,
             embedding_features=300,
             lstm_features=self.question_features,
             use_hidden=False, # use whole output, not just final hidden
             drop=0.0,
+            enable_hint=self.enable_hint,
         )
         self.interIntraBlocks = MultiBlock(
             num_block=self.num_block,
@@ -67,6 +77,10 @@ class DFAF(nn.Module):
             drop=0.5,
             apply_mask=self.apply_mask,
         )
+
+        if not self.enable_image:
+            # create a learnable features for visual features
+            self.dummy_visual_feature = nn.Parameter(torch.randn(1, self.num_vision_tokens, self.vision_features))
 
         ## mokey patching for fasterRCNN
         def fasterRCNN_dfaf_forward(self, images, targets=None):
@@ -153,18 +167,36 @@ class DFAF(nn.Module):
             return: 
             {
                 'loss': loss,
+                'accuracy': accuracy,
             }
         """
         B = len(data['question'])
+        DEVICE = data['incontext_image'].device
         incontext_image = data['incontext_image']
-        incontext_image_mask = torch.ones(B, incontext_image.shape[1]).to(incontext_image.device)
+        incontext_image_mask = torch.ones(B, incontext_image.shape[1]).to(DEVICE)
+        incontext_hint = data['incontext_hint']
+        incontext_hint_mask = torch.ones(B, self.max_hint_words).to(DEVICE)
         question = data['question']
-        question_mask = torch.ones(B, self.max_text_words).to(incontext_image.device)
+        question_mask = torch.ones(B, self.max_question_words).to(DEVICE)
         
-        question, question_length = self._question_to_index(question)
-        question = question.to(incontext_image.device)
+        question, question_length = self._text_to_index(question, is_hint=False)
+        question = question.to(DEVICE)
         question_feature = self.text(question, question_length)
-        visual_feature = self._extract_visual_feature(incontext_image)
+        
+        if self.enable_image:
+            visual_feature = self._extract_visual_feature(incontext_image)
+        else:
+            visual_feature = self.dummy_visual_feature.expand([B, -1, -1]).to(DEVICE)
+        
+        if self.enable_hint:
+            incontexthint, incontexthint_length = self._text_to_index(incontext_hint, is_hint=True)
+            incontexthint = incontexthint.to(DEVICE)
+            incontexthint_feature = self.text(incontexthint, incontexthint_length)
+            # concate incontexthint_feature to question_feature
+            question_feature = torch.cat((question_feature, incontexthint_feature), dim=1)
+            question_mask = torch.cat((question_mask, incontext_hint_mask), dim=1)
+        else:
+            pass
         
         visual_feature, question_feature = self.interIntraBlocks(visual_feature, question_feature, incontext_image_mask, question_mask)
         answer = self.classifier(visual_feature, question_feature, incontext_image_mask, question_mask)
@@ -189,18 +221,22 @@ class DFAF(nn.Module):
 
 
     @torch.no_grad()
-    def _question_to_index(self, question: list) -> torch.Tensor:
-        q_indices = []
-        q_length = []
-        for q in question:
-            q = q.split()
-            q = [w.replace(',', '').replace('.', '').replace('?', '').lower() for w in q]
-            q = [self.vocab['question'][w] if w in self.vocab['question'] else -1 for w in q][:self.max_text_words]
-            q_length.append(len(q))
-            q = q + [-1] * (self.max_text_words - len(q))
-            q_indices.append(q)
-        q_indices = torch.tensor(q_indices, dtype=torch.long)
-        return q_indices, q_length
+    def _text_to_index(self, text: list, is_hint: bool) -> torch.Tensor:
+        if is_hint:
+            max_words = self.max_hint_words
+        else:
+            max_words = self.max_question_words
+        t_indices = []
+        t_length = []
+        for t in text:
+            t = t.split()
+            t = [w.replace(',', '').replace('.', '').replace('?', '').lower() for w in t]
+            t = [self.text_dict[w] if w in self.text_dict else -1 for w in t][:max_words]
+            t_length.append(len(t))
+            t = t + [-1] * (max_words - len(t))
+            t_indices.append(t)
+        t_indices = torch.tensor(t_indices, dtype=torch.long)
+        return t_indices, t_length
 
     @torch.no_grad()
     def _extract_visual_feature(self, image: torch.Tensor) -> torch.Tensor:

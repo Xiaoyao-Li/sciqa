@@ -41,16 +41,18 @@ def main():
     question_vocab = extract_vocab(questions,)
     hints_vocab = extract_vocab(hints,)
     choice_vocab = extract_vocab(choices,)
+    question_and_hint_vocab = extract_vocab(questions+hints,)
 
     vocabs = {
         'question': question_vocab,
         'hint': hints_vocab,
+        'question_and_hint': question_and_hint_vocab,
         'choice': choice_vocab,
     }
-    # with open('/mnt/seagate12t/VQA/scienceqa/vocab.json', 'w') as fd:
-    #     json.dump(vocabs, fd)
-    # with open('./datasets/assets/scienceqa_vocab.json', 'w') as fd:
-    #     json.dump(vocabs, fd)
+    with open('/mnt/seagate12t/VQA/scienceqa/vocab.json', 'w') as fd:
+        json.dump(vocabs, fd)
+    with open('./datasets/assets/scienceqa_vocab.json', 'w') as fd:
+        json.dump(vocabs, fd)
 
 if __name__ == '__main__':
     main()
