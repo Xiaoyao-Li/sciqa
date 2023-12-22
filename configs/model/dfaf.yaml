@@ -19,5 +19,3 @@ max_hint_words: 64
 num_vision_tokens: 32
 
 vocab_path: ./datasets/assets/scienceqa_vocab.json
-vocab_path_slurm: null
-vocab_path_charlie: null
