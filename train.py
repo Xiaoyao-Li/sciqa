@@ -29,7 +29,7 @@ def train(cfg: DictConfig) -> None:
     datasets = {
         'train': create_dataset(cfg.task.dataset, 'train', cfg.slurm, cfg.charlie),
         'val': create_dataset(cfg.task.dataset, 'val', cfg.slurm, cfg.charlie),
-        # 'test': create_dataset(cfg.task.dataset, 'test', cfg.slurm),
+        # 'test': create_dataset(cfg.task.dataset, 'test', cfg.slurm, cfg.charlie),
     }
     if cfg.task.visualizer.visualize:
         raise NotImplementedError('Visualizer is not implemented yet.')
@@ -51,8 +51,15 @@ def train(cfg: DictConfig) -> None:
             collate_fn=collate_fn,
             num_workers=cfg.task.test.num_workers,
             pin_memory=True,
-            shuffle=True,
+            shuffle=False,
         ),
+        # 'test': datasets['test'].get_dataloader(
+        #     batch_size=cfg.task.test.batch_size,
+        #     collate_fn=collate_fn,
+        #     num_workers=cfg.task.test.num_workers,
+        #     pin_memory=True,
+        #     shuffle=False,
+        # ),
     }
     if 'test_for_vis' in datasets:
         raise NotImplementedError('Visualizer is not implemented yet.')

@@ -16,7 +16,28 @@
     //         },
     //     }
     // ]
+    
+    //* DFAF model debug launch
+    // "configurations": [
+    //     {
+    //         "name": "Python: Current File",
+    //         "type": "python",
+    //         "request": "launch",
+    //         "program": "./train.py",
+    //         "console": "integratedTerminal",
+    //         "justMyCode": false,
+    //         "env": {
+    //             "PYTHONPATH": "${workspaceFolder}",
+    //             // "CHARLIE": "1",
+    //         },
+    //         "args": [
+    //             "exp_name=debug", "model=dfaf", "task=scienceqa",
+    //             "model.enable_image=true", "model.enable_hint=true",
+    //         ]
+    //     }
+    // ]
 
+    //* TFUSE model debug launch
     "configurations": [
         {
             "name": "Python: Current File",
@@ -30,7 +51,7 @@
                 // "CHARLIE": "1",
             },
             "args": [
-                "exp_name=debug", "model=dfaf", "task=scienceqa",
+                "exp_name=debug", "model=tfuse", "task=scienceqa",
                 "model.enable_image=true", "model.enable_hint=true",
             ]
         }
