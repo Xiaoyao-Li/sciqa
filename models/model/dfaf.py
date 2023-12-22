@@ -138,11 +138,9 @@ class DFAF(nn.Module):
                 proposals[idx] = p
             detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
             detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)  # type: ignore[operator]
-
             losses = {}
             losses.update(detector_losses)
             losses.update(proposal_losses)
-
             if torch.jit.is_scripting():
                 if not self._has_warned:
                     warnings.warn("RCNN always returns a (Losses, Detections) tuple in scripting")

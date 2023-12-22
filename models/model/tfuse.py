@@ -70,9 +70,9 @@ class TFUSE(nn.Module):
             apply_mask=self.apply_mask,
         )
 
-        if not self.enable_image:
-            # create a learnable features for visual features
-            self.dummy_visual_feature = nn.Parameter(torch.randn(1, self.num_vision_tokens, self.token_features_dim))
+        # if not self.enable_image:
+            # # create a learnable features for visual features
+        self.dummy_visual_feature = nn.Parameter(torch.randn(1, self.num_vision_tokens, self.token_features_dim))
         if self.global_pool == 'cls':
             self.cls_token = nn.Parameter(torch.randn(1, 1, self.token_features_dim))
 
@@ -167,7 +167,7 @@ class TFUSE(nn.Module):
         B = len(data['question'])
         DEVICE = data['incontext_image'].device
         incontext_image = data['incontext_image']
-        # incontext_image_mask = torch.ones(B, incontext_image.shape[1]).to(DEVICE)
+        incontext_image_mask = data['mask_image'].to(DEVICE)
         incontext_hint = data['incontext_hint']
         # incontext_hint_mask = torch.ones(B, self.max_hint_words).to(DEVICE)
         question = data['question']
@@ -179,6 +179,11 @@ class TFUSE(nn.Module):
         
         if self.enable_image:
             context_feature = self._extract_visual_feature(incontext_image)
+            dvf = self.dummy_visual_feature.expand([B, -1, -1]).to(DEVICE)
+            imask = incontext_image_mask.view(-1, 1, 1)
+            imask_inv = ~imask
+            context_feature = context_feature * imask.float()
+            context_feature = context_feature + dvf * imask_inv.float()
         else:
             context_feature = self.dummy_visual_feature.expand([B, -1, -1]).to(DEVICE)
         

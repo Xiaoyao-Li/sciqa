@@ -102,7 +102,7 @@ class ScienceQA(Dataset):
             'pid': pid,
             'mask_hint': None,
             'incontext_hint': metadata['hint'],
-            'mask_image': torch.tensor(mask_image, dtype=torch.float32),
+            'mask_image': torch.tensor(mask_image, dtype=torch.bool),
             'incontext_image': image,
             'question': metadata['question'],
             'choices': metadata['choices'],
