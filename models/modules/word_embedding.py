@@ -21,12 +21,13 @@ from torch.nn.utils.rnn import pack_padded_sequence
 qa_path = './models/model/assets'
 class TextProcessor(nn.Module):
     def __init__(self, classes, embedding_features, lstm_features, drop=0.0, use_hidden=True, use_tanh=False, only_embed=False,
-                 enable_hint=False):
+                 enable_hint=False, disable_pretrain_text=False):
         super(TextProcessor, self).__init__()
         self.use_hidden = use_hidden # return last layer hidden, else return all the outputs for each words
         self.use_tanh = use_tanh
         self.only_embed = only_embed
         self.enable_hint = enable_hint
+        self.disable_pretrain_text = disable_pretrain_text
         classes = list(classes)
 
         self.embed = nn.Embedding(len(classes)+1, embedding_features, padding_idx=len(classes))
@@ -35,8 +36,10 @@ class TextProcessor(nn.Module):
         else:
             weight_init = torch.from_numpy(np.load(qa_path+'/glove6b.init_scienceqa_onlyquestion_300d.npy'))
         assert weight_init.shape == (len(classes), embedding_features)
-        print('glove weight shape: ', weight_init.shape)
-        self.embed.weight.data[:len(classes)] = weight_init
+       
+        if not self.disable_pretrain_text:
+            self.embed.weight.data[:len(classes)] = weight_init
+            print(f'load glove embed into textembedding')
         print('word embed shape: ', self.embed.weight.shape)
         
         self.drop = nn.Dropout(drop)

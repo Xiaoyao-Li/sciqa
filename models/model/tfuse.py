@@ -36,11 +36,17 @@ class TFUSE(nn.Module):
         self.loss_type = cfg.loss_type
         self.enable_image = cfg.enable_image
         self.enable_hint = cfg.enable_hint
+        self.disable_pretrain_image = cfg.disable_pretrain_image
+        self.disable_pretrain_text = cfg.disable_pretrain_text
         self.vocab = json.load(open(cfg.vocab_path, 'r'))
         
         self.choice_to_index = self.vocab['choice']
 
-        self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True, weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
+        if self.disable_pretrain_image:
+            self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=False)
+            assert cfg.freeze_fasterRCNN == False
+        else:
+            self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True, weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
 
         if not self.enable_hint:
             self.words_list = self.vocab['question'].keys()
@@ -55,6 +61,7 @@ class TFUSE(nn.Module):
             use_hidden=False, # use whole output, not just final hidden
             drop=0.0,
             enable_hint=self.enable_hint,
+            disable_pretrain_text=self.disable_pretrain_text,
         )
         self.transformerBlock = nn.Transformer(
             d_model=self.token_features_dim,

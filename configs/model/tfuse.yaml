@@ -13,6 +13,8 @@ apply_mask: false
 freeze_fasterRCNN: true
 enable_image: false
 enable_hint: false
+disable_pretrain_image: false
+disable_pretrain_text: false
 
 max_choices: 2048
 max_question_words: 16
