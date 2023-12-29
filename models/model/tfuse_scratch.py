@@ -187,7 +187,7 @@ class TFUSE_SCRATCH(nn.Module):
             visual_feature: [batch, 32, 1024]
         """
         visual_feature = self.visual_encoder(image)
-
+        visual_feature = visual_feature.flatten(2).permute(0, 2, 1)
         return visual_feature
 
 class Classifier(nn.Sequential):
