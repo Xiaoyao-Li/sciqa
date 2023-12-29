@@ -72,11 +72,9 @@
                 // "CHARLIE": "1",
             },
             "args": [
-                "exp_name=debug", "model=tfuse", "task=scienceqa",
+                "exp_name=debug", "model=tfuse_scratch", "task=scienceqa",
                 "model.enable_image=true", "model.enable_hint=true",
                 "model.global_pool=max",
-                "model.disable_pretrain_image=true", "model.disable_pretrain_text=true",
-                "model.freeze_fasterRCNN=false"
             ]
         }
     ]
