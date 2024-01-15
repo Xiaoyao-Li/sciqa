@@ -1,1 +1,0 @@
-from .scienceqa import ScienceQA

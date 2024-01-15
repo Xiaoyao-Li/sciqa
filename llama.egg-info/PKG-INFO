@@ -1,0 +1,20 @@
+Metadata-Version: 2.1
+Name: llama
+Version: 0.0.0
+License-File: LICENSE
+Requires-Dist: torch
+Requires-Dist: fairscale
+Requires-Dist: fire
+Requires-Dist: sentencepiece
+Requires-Dist: transformers
+Requires-Dist: timm
+Requires-Dist: tensorboard
+Provides-Extra: dev
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: bandit; extra == "dev"
+Requires-Dist: coverage; extra == "dev"
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: isort; extra == "dev"
