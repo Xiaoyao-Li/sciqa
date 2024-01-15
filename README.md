@@ -13,7 +13,7 @@ pip install -r requirements.txt
 Download ScienceQA datset by following the [instruction](https://scienceqa.github.io/#dataset). Then change your data path in the config.
 
 ## Checkpoint Preparation
-Download the checkpoint of the our TFuse model trained on ScienceQA by following the [tsinghua cloud](). Then unzip and organize the checkpoint as follows:
+Download the checkpoint of the our TFuse model trained on ScienceQA by following the [tsinghua cloud](https://cloud.tsinghua.edu.cn/d/b5d66071416247f88dc7/). Then unzip and organize the checkpoint as follows:
 ```
 ├── outputs
 │   ├── 2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu
