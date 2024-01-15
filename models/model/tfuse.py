@@ -38,12 +38,13 @@ class TFUSE(nn.Module):
         self.enable_hint = cfg.enable_hint
         self.disable_pretrain_image = cfg.disable_pretrain_image
         self.disable_pretrain_text = cfg.disable_pretrain_text
+        self.freeze_fasterRCNN = cfg.freeze_fasterRCNN
         self.vocab = json.load(open(cfg.vocab_path, 'r'))
         
         self.choice_to_index = self.vocab['choice']
 
         if self.disable_pretrain_image:
-            self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=False)
+            self.fasterRCNN = fasterrcnn_resnet50_fpn(weights=None, weights_backbone=None)
             assert cfg.freeze_fasterRCNN == False
         else:
             self.fasterRCNN = fasterrcnn_resnet50_fpn(pretrained=True, weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
@@ -87,7 +88,9 @@ class TFUSE(nn.Module):
         def fasterRCNN_tfuse_forward(self, images, targets=None):
             if self.training:
                 if targets is None:
-                    torch._assert(False, "targets should not be none when in training mode")
+                    self.training = False
+                    self.rpn.training = False
+                    self.roi_heads.training = False
                 else:
                     for target in targets:
                         boxes = target["boxes"]
@@ -258,7 +261,7 @@ class TFUSE(nn.Module):
         t_indices = torch.tensor(t_indices, dtype=torch.long)
         return t_indices, t_length
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def _extract_visual_feature(self, image: torch.Tensor) -> torch.Tensor:
         """
         Args:
@@ -266,7 +269,8 @@ class TFUSE(nn.Module):
         Returns:
             visual_feature: [batch, 32, 1024]
         """
-        self.fasterRCNN.eval()
+        if self.freeze_fasterRCNN:
+            self.fasterRCNN.eval()
         visual_features = []
         feature_scores = []
         hook_handles = []
