@@ -8,7 +8,7 @@ global_pool: mean  ## can be [cls, mean, max]
 classifier_mid_features: 1024
 classifier_dropout: 0.5
 
-loss_type: BCE  ## can be [BCE, SCE, KL, MultiLabel]
+loss_type: BCE  ## can be [BCE, SCE, KL, MultiLabel, TEST]
 apply_mask: false
 enable_image: false
 enable_hint: false

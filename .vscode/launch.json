@@ -52,19 +52,68 @@
     //         },
     //         "args": [
     //             "exp_name=debug", "model=tfuse", "task=scienceqa",
-    //             "model.enable_image=true", "model.enable_hint=true",
-    //             "model.global_pool=max"
+    //             "model.enable_image=false", "model.enable_hint=false",
+    //             "model.disable_pretrain_image=true", "model.disable_pretrain_text=true",
+    //             "model.freeze_fasterRCNN=false",
+    //             "model.global_pool=cls",
+    //             "model.classifier_dropout=0.5"
     //         ]
     //     }
     // ]
 
     //* TFUSE from scratch debug launch
+    // "configurations": [
+    //     {
+    //         "name": "Python: Current File",
+    //         "type": "python",
+    //         "request": "launch",
+    //         "program": "./train.py",
+    //         "console": "integratedTerminal",
+    //         "justMyCode": false,
+    //         "env": {
+    //             "PYTHONPATH": "${workspaceFolder}",
+    //             // "CHARLIE": "1",
+    //         },
+    //         "args": [
+    //             "exp_name=debug", "model=tfuse_scratch", "task=scienceqa",
+    //             "model.enable_image=true", "model.enable_hint=true",
+    //             "model.global_pool=max",
+    //         ]
+    //     }
+    // ]
+
+    //! Testing Results
+    // "configurations": [
+    //     {
+    //         "name": "Python: Current File",
+    //         "type": "python",
+    //         "request": "launch",
+    //         "program": "./test.py",
+    //         "console": "integratedTerminal",
+    //         "justMyCode": false,
+    //         "env": {
+    //             "PYTHONPATH": "${workspaceFolder}",
+    //             // "CHARLIE": "1",
+    //         },
+    //         "args": [
+    //             "exp_dir=outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu", 
+    //             "model.enable_image=true", "model.enable_hint=true",
+                
+    //             "model.loss_type=TEST",
+    //             "model=tfuse", "task=scienceqa",
+    //             "model.global_pool=cls",
+    //             "model.classifier_dropout=0.5"
+    //         ]
+    //     }
+    // ]
+
+    //! Testing Results
     "configurations": [
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "./train.py",
+            "program": "./postprocess/eval_metrics.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
@@ -72,9 +121,7 @@
                 // "CHARLIE": "1",
             },
             "args": [
-                "exp_name=debug", "model=tfuse_scratch", "task=scienceqa",
-                "model.enable_image=true", "model.enable_hint=true",
-                "model.global_pool=max",
+                "--result_file=outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu/results/results.json"
             ]
         }
     ]

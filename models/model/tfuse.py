@@ -225,8 +225,11 @@ class TFUSE(nn.Module):
             raise NotImplementedError
         
         answer = self.classifier(question_feature)
-        loss, accuracy = self.criterion(answer, data['choices'], data['answer'])
 
+        if self.loss_type == 'TEST':
+            answer = self.criterion(answer, data['choices'], data['answer'])
+            return {'pred_answer': answer}
+        loss, accuracy = self.criterion(answer, data['choices'], data['answer'])
         return {'loss': loss, 'accuracy': accuracy}
     
     def criterion(self, pred_answer, choices, answer):
@@ -235,13 +238,22 @@ class TFUSE(nn.Module):
             answer_onehot = torch.zeros(pred_answer.shape).to(pred_answer.device)
             answer_onehot.scatter_(1, answer_indices.unsqueeze(1), 1)
             loss = F.binary_cross_entropy_with_logits(pred_answer, answer_onehot)
-
             pred_answer_indices = pred_answer.argmax(dim=1)
             accuracy = (pred_answer_indices == answer_indices).sum().float() / len(answer_indices)
+            
+            return loss, accuracy
+        elif self.loss_type == 'TEST':
+            choices_indices = [[self.choice_to_index[c] for c in cs] for cs in choices]
+            pred_answer_indices = []
+            pred_answer = pred_answer.detach().cpu().numpy()
+            for i, cs in enumerate(choices_indices):
+                cs = [c if c < self.max_choices else -1 for c in cs]
+                ans = pred_answer[i][cs]
+                pred_answer_indices.append(ans.argmax().item())
+
+            return pred_answer_indices
         else:
             raise NotImplementedError
-        
-        return loss, accuracy
 
     @torch.no_grad()
     def _text_to_index(self, text: list, is_hint: bool) -> torch.Tensor:

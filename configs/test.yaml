@@ -1,0 +1,23 @@
+## config/default.yaml
+hydra:
+  run:
+    dir: ${exp_dir}
+  output_subdir: null
+
+defaults:
+  - _self_
+  - model: null
+  - task: null
+
+slurm: false
+charlie: false
+# output_dir: outputs
+# exp_name: default
+exp_dir: None
+tb_dir: ${exp_dir}/tb_logs
+vis_dir: ${exp_dir}/visual
+ckpt_dir: ${exp_dir}/ckpts
+result_dir: ${exp_dir}/results
+
+# for visualization in test
+gpu: 0
