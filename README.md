@@ -10,11 +10,32 @@ pip install -r requirements.txt
 ```
 
 ## Data Preparation
-Download ScienceQA datset by following the [instruction](https://scienceqa.github.io/#dataset). The change your data path in the config.
+Download ScienceQA datset by following the [instruction](https://scienceqa.github.io/#dataset). Then change your data path in the config.
 
-## Training
-### Baseline DFAF
-```bash
-bash scripts/train.sh exp_dfaf dfaf scienceqa  
+## Checkpoint Preparation
+Download the checkpoint of the our TFuse model trained on ScienceQA by following the [tsinghua cloud](). Then unzip and organize the checkpoint as follows:
+```
+├── outputs
+│   ├── 2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu
+│   ├── 2024-01-15_11-01-47_tfuse_scratchrcnn_onlyhint_clspool_do0.5_32bs_1gpu
+│   ├── 2024-01-15_11-05-36_tfuse_scratchrcnn_onlyimage_clspool_do0.5_32bs_1gpu
+│   ├── 2024-01-15_13-27-54_tfuse_scratchrcnn_nocontext_clspool_do0.5_32bs_1gpu
 ```
 
+## Usage
+
+### Training TFuse Model
+```bash
+bash scripts/train.sh full_context_32bs_1gpu tfuse scienceqa
+```
+
+### Testing Model
+```bash
+bash scripts/test.sh ${exp_dir}
+```
+
+For example, you can directly run the following command to reproduce the result of our TFuse model:
+```bash
+bash scripts/test.sh outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu
+python postprocess/eval_metrics.py --result_file outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu/results/results.json
+```

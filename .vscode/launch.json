@@ -83,37 +83,12 @@
     // ]
 
     //! Testing Results
-    // "configurations": [
-    //     {
-    //         "name": "Python: Current File",
-    //         "type": "python",
-    //         "request": "launch",
-    //         "program": "./test.py",
-    //         "console": "integratedTerminal",
-    //         "justMyCode": false,
-    //         "env": {
-    //             "PYTHONPATH": "${workspaceFolder}",
-    //             // "CHARLIE": "1",
-    //         },
-    //         "args": [
-    //             "exp_dir=outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu", 
-    //             "model.enable_image=true", "model.enable_hint=true",
-                
-    //             "model.loss_type=TEST",
-    //             "model=tfuse", "task=scienceqa",
-    //             "model.global_pool=cls",
-    //             "model.classifier_dropout=0.5"
-    //         ]
-    //     }
-    // ]
-
-    //! Testing Results
     "configurations": [
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "./postprocess/eval_metrics.py",
+            "program": "./test.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
@@ -121,8 +96,33 @@
                 // "CHARLIE": "1",
             },
             "args": [
-                "--result_file=outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu/results/results.json"
+                "exp_dir=outputs/charlie/2024-01-15_11-05-36_tfuse_scratchrcnn_onlyimage_clspool_do0.5_32bs_1gpu", 
+                "model.enable_image=true", "model.enable_hint=true",
+                
+                "model.loss_type=TEST",
+                "model=tfuse", "task=scienceqa",
+                "model.global_pool=cls",
+                "model.classifier_dropout=0.5"
             ]
         }
     ]
+
+    //! Testing Results
+    // "configurations": [
+    //     {
+    //         "name": "Python: Current File",
+    //         "type": "python",
+    //         "request": "launch",
+    //         "program": "./postprocess/eval_metrics.py",
+    //         "console": "integratedTerminal",
+    //         "justMyCode": false,
+    //         "env": {
+    //             "PYTHONPATH": "${workspaceFolder}",
+    //             // "CHARLIE": "1",
+    //         },
+    //         "args": [
+    //             "--result_file=outputs/charlie/2023-12-29_21-28-40_tfuse_scratchrcnn_fullcontext_clspool_do0.5_32bs_1gpu/results/results.json"
+    //         ]
+    //     }
+    // ]
 }
