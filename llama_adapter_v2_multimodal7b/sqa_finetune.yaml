@@ -1,5 +1,5 @@
 META:
-  - './ScienceQA_Data/test_problems.json'
+  - './ScienceQA_Data/train_problems.json'
 sqa:
   name: SQATask
   dataloader:
