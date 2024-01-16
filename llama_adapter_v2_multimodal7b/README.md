@@ -46,3 +46,8 @@
   ```
   python ./evaluate_sqa.py --pretrained_path ./output/checkpoint-3.pth --llama_path ./llama_checkpoints/ --output_path ./output_evaluation --data_config ./sqa_test.yaml
   ```
+
+### Calculating Accuracy of Testing OR Converting the .txt Result File to .json Result File
+  ```
+  python ./calculateAcc.py
+  ```
