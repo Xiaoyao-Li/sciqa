@@ -1,6 +1,6 @@
 # SCIQA Finetuning on LLaMA-Adapter: Efficient Fine-tuning of LLaMA 🚀
 
-## Announcement: This is a repository forked from LLaMA-Adapter which is ONLY used for coarse project of Machine Learning 2024.
+## Announcement: This is a repository forked from LLaMA-Adapter which is ONLY used for coarse project of 2023-2024 Machine Learning.
 
 ## Please Enter the llama_adapter_v2_multimodal7b directory which is our main directory for project!
 

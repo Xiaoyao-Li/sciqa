@@ -1,4 +1,4 @@
-# LLaMA-Adapter-V2 Multi-modal
+# Finetuning LLaMA-Adapter-V2 Multi-modal 7B for 2023-2024 Machine Learning Project
 
 ## Setup
 
